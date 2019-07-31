@@ -39,12 +39,14 @@
 #include "wx/scopedptr.h"
 #include "wx/stopwatch.h"
 #include "wx/versioninfo.h"
-#if !wxUSE_THREADS
-    #error "This sample requires thread support!"
-#endif 
+#include <wx/bitmap.h>
+
 #include "wx/thread.h"
 #include "wx/dynarray.h"
 #include "wx/image.h"
+#if !wxUSE_THREADS
+    #error "This sample requires thread support!"
+#endif 
 // #include <mysql/mysql.h>
 // Include files to use the pylon API.
 #include  "pylon/PylonIncludes.h"
@@ -86,6 +88,8 @@ static const uint32_t c_countOfImagesToGrab =  500000;
 static const size_t c_maxCamerasToUse = 8;
 static const int imagesW  =  480;
 static const int imagesH  =  320;
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);//定义事件种类
+wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_UPDATE, wxThreadEvent);
 
 void  ShowImage( IImage& image, const char* message = NULL)
 {
@@ -218,7 +222,6 @@ bool MyApp::OnInit()
     frame->SetFrame(frame);
     frame->SetIsCapture(false);
     DrawHandle();
-    frame->initCameras();
     frame->Show(true); 
     return true;
 }
@@ -380,7 +383,6 @@ void *MyThread::Entry()
 void MyThread::play_cameras()
 {
     PylonInitialize();
-    string filesName;
      try
     {
 		MyBufferFactory myFactory;
@@ -390,8 +392,8 @@ void MyThread::play_cameras()
         CGrabResultPtr ptrGrabResult;
         CImageFormatConverter Format_converter;
         CPylonImage targetImage;
-        wxImage images;
         string filesName;
+        wxImage images;
         Format_converter.OutputPixelFormat = PixelType_BGR8packed;
 		if (tlFactory.EnumerateDevices(devices) == 0)
 		{
@@ -416,13 +418,19 @@ void MyThread::play_cameras()
             cout << "SizeX: " << ptrGrabResult->GetWidth() << endl;
             cout << "SizeY: " << ptrGrabResult->GetHeight() << endl;
             const uint8_t *pImageBuffer = (uint8_t *) ptrGrabResult->GetBuffer();
-            cout << "Gray value of first pixel: " << (uint32_t) pImageBuffer[0] << endl << endl;    
+            cout << "Gray value of first pixel: " << (uint32_t) pImageBuffer[0] << endl << endl;
             Format_converter.Convert(targetImage, ptrGrabResult);
+            filesName = make_filename(cameraContextValue);
             openCvImage =  Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *) targetImage.GetBuffer());
-            MatToWxImage(openCvImage, images);
-            displaySynchronous(wxEVT_COMMAND_MYTHREAD_UPDATE, images, cameraContextValue);
+            imwrite(filesName, openCvImage);
+            if (images.LoadFile(filesName, wxBITMAP_TYPE_PNG))
+            {
+                
+            }
+            //images.Destroy();
+            //images = NULL;
             /*
-            wxBitmap bitmap(images);
+            // displaySynchronous(wxEVT_COMMAND_MYTHREAD_UPDATE, bitmap, cameraContextValue);
             DrawShape* newShape = new DrawShape(wxBitmap(image));
             if (cameraContextValue == 0) 
             {
@@ -442,12 +450,11 @@ void MyThread::play_cameras()
             }
             gui->Refresh(true);
             gui->Update();
+            //imwrite(filesName, openCvImage);
              */
             //////////////////////////////////////////////////////////////////////
-            filesName = this->make_filename(cameraContextValue);
-            //imwrite(filesName, openCvImage);
             cout << "the image file name is : " << filesName << endl;    
-            WaitObject::Sleep(150);
+            WaitObject::Sleep(100);
         } while (cameras.IsGrabbing());
         cameras.StopGrabbing();
         cameras.Close();
@@ -464,55 +471,9 @@ void MyThread::displaySynchronous(const wxEventType & evtType, const wxBitmap bi
 {
     wxThreadEvent * threadEvt = new wxThreadEvent(evtType);
 	THREAD_MSG_TYPE * threadMsg = new THREAD_MSG_TYPE{ wxThread::GetCurrentId(), cameras_index, bitmap };
-	threadEvt->SetExtraLong(reinterpret_cast<long>(threadMsg));
-	wxQueueEvent(gui, threadEvt);
-}
-
-void MyThread::MatToWxImage(Mat &mat, wxImage  &image)
-{
-    // data dimension
-    int w = mat.cols, h = mat.rows;//获取MAT宽度，高度
-    int size = w*h*3*sizeof(unsigned char);//为WxImage分配空间数，因为其为24bit，所以*3
-    // allocate memory for internal wxImage data
-    unsigned char * wxData = (unsigned char*) malloc(size);//分配空间
-    // the matrix stores BGR image for conversion
-    Mat cvRGBImg = Mat(h, w, CV_8UC3, wxData);//转换存储用MAT
-    switch (mat.channels())//根据MAT通道数进行转换
-    {
-        case 1: // 1-channel case: expand and copy灰度到RGB
-        {
-            // convert type if source is not an integer matrix
-            if (mat.depth() != CV_8U)//不是unsigned char先转化
-            {
-                cvtColor(convertType(mat, CV_8U, 255,0), cvRGBImg, CV_8U);//把图片从一个颜色空间转换为另一个
-            }
-            else
-            {
-                cvtColor(mat, cvRGBImg, CV_8U);
-            }
-        } 
-        break;
-        case 3: // 3-channel case: swap R&B channels
-        {
-            int mapping[] = {0,2,1,1,2,0}; // CV(BGR) to WX(RGB)
-            // bgra[0] -> bgr[2], bgra[1] -> bgr[1], bgra[2] -> bgr[0]，即转成RGB，舍弃alpha通道
-            mixChannels(&mat, 1, &cvRGBImg, 1, mapping, 3);//一个输入矩阵，一个输出矩阵，maping中三个索引对
-        } 
-        break;
-        default://通道数量不对
-        {
-            wxLogError(wxT("Cv2WxImage : input image (#channel=%d) should be either 1- or 3-channel"), mat.channels());
-        }
-  }
-  image.Destroy(); // free existing data if there's any
-  image = wxImage(w, h, wxData);
-}
-
-Mat MyThread::convertType(const Mat& srcImg, int toType, double alpha, double beta)
-{
-    Mat dstImg;
-    srcImg.convertTo(dstImg, toType, alpha, beta);
-    return dstImg;
+	// threadEvt->SetExtraLong(reinterpret_cast<long>(threadMsg));
+    //threadEvt->SetInt ( 1 );
+   wxMessageOutputDebug().Printf("MYFRAME: MyThread update...\n");
 }
 
 string MyThread::make_filename(intptr_t cameras_order) 
@@ -559,17 +520,14 @@ MyFrame::MyFrame() : wxFrame(NULL, wxID_ANY, wxT("衡钢钢管缺陷检测--视�
 {
     SetIcon(wxICON(sample));
     wxMenuBar *menu_bar = new wxMenuBar;
-
     wxMenu *file_menu = new wxMenu;
     file_menu->Append(LAYOUT_TEST_PROPORTIONS, wxT("&开始采集数据...\tF1"));
     file_menu->AppendSeparator();
     file_menu->Append(LAYOUT_QUIT, wxT("退&出"), wxT("退出程序"));
     menu_bar->Append(file_menu, wxT("&功能"));
-
     wxMenu *help_menu = new wxMenu;
     help_menu->Append(LAYOUT_ABOUT, wxT("关于&软件"), wxT("关于软件..."));
     menu_bar->Append(help_menu, wxT("&说明"));
-
     SetMenuBar(menu_bar);
 #if wxUSE_STATUSBAR
     CreateStatusBar(2);
@@ -588,130 +546,6 @@ MyFrame::MyFrame() : wxFrame(NULL, wxID_ANY, wxT("衡钢钢管缺陷检测--视�
     sizerTop->Add(sizerCol1, 1, wxEXPAND);
     p->SetSizer(sizerTop);
     sizerTop->SetSizeHints(this);
-}
-
-void MyFrame::initShowCameras() 
-{
-    bool iscapture = GetIsCapture();
-    if (!iscapture) { 
-        return ;
-    }
-    PylonInitialize();
-    string filesName;
-     try
-    {
-		MyBufferFactory myFactory;
-		CTlFactory& tlFactory = CTlFactory::GetInstance();
-		DeviceInfoList_t devices;
-		if (tlFactory.EnumerateDevices(devices) == 0)
-		{
-			throw RUNTIME_EXCEPTION("No camera present.");
-			PylonTerminate();
-			return;
-		}
-        CInstantCameraArray cameras(min(devices.size(), c_maxCamerasToUse));
-		 for (size_t i = 0; i < cameras.GetSize(); ++i)
-		{
-            cameras[i].Attach( tlFactory.CreateDevice( devices[i]));
-            cameras[i].RegisterConfiguration( new CSoftwareTriggerConfiguration, RegistrationMode_ReplaceAll, Cleanup_Delete);
-            cameras[i].RegisterConfiguration( new CConfigurationEventPrinter, RegistrationMode_Append, Cleanup_Delete);
-            cameras[i].RegisterImageEventHandler( new CImageEventPrinter, RegistrationMode_Append, Cleanup_Delete);
-            cameras[i].RegisterImageEventHandler( new CSampleImageEventHandler, RegistrationMode_Append, Cleanup_Delete);
-            cameras[i].SetBufferFactory(&myFactory, Cleanup_None);
-            cameras[i].MaxNumBuffer = 5;
-            cameras[i].Open();
-        }
-        if (cameras[0].CanWaitForFrameTriggerReady() && cameras[1].CanWaitForFrameTriggerReady())
-        {
-            cameras[0].StartGrabbing( GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-            cameras[1].StartGrabbing( GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-            do
-            {
-                if ( cameras[0].WaitForFrameTriggerReady(500, TimeoutHandling_ThrowException))
-                {
-                    cameras[0].ExecuteSoftwareTrigger();
-                }
-                if ( cameras[1].WaitForFrameTriggerReady(500, TimeoutHandling_ThrowException))
-                {
-                    cameras[1].ExecuteSoftwareTrigger();
-                }
-                WaitObject::Sleep(200);
-            } while ( true);     
-        }
-        cameras.StopGrabbing();
-        cameras.Close();
-    }
-    catch (const GenericException &e)
-    {
-        (void)wxMessageBox(e.GetDescription(), wxT("视频设备-错误信息"), wxOK|wxICON_INFORMATION);
-    }
-    PylonTerminate(); 
-    initCameras();
-}
-
-void MyFrame::initCameras()
-{
-    bool iscapture = GetIsCapture();
-    if (!iscapture) { 
-        return ;
-    }
-    PylonInitialize();
-    string filesName;
-     try
-    {
-		MyBufferFactory myFactory;
-		CTlFactory& tlFactory = CTlFactory::GetInstance();
-		DeviceInfoList_t devices;
-        Mat openCvImage;
-        CGrabResultPtr ptrGrabResult;
-        CImageFormatConverter Format_converter;
-        CPylonImage targetImage;
-         string filesName;
-        Format_converter.OutputPixelFormat = PixelType_BGR8packed;
-		if (tlFactory.EnumerateDevices(devices) == 0)
-		{
-			throw RUNTIME_EXCEPTION("No camera present.");
-			PylonTerminate();
-			return;
-		}
-        CInstantCameraArray cameras(min(devices.size(), c_maxCamerasToUse));
-		cout << "Using Total Device Number is : " << cameras.GetSize() << endl;
-        for (size_t i = 0; i < cameras.GetSize(); ++i)
-		{
-            cameras[i].Attach(tlFactory.CreateDevice(devices[i]));
-           cout << "Using device " << cameras[ i ].GetDeviceInfo().GetModelName() << endl;
-        }
-        cameras.StartGrabbing();
-        do 
-        {
-            cameras.RetrieveResult( 5000, ptrGrabResult, TimeoutHandling_ThrowException);
-            intptr_t cameraContextValue = ptrGrabResult->GetCameraContext();
-            cout << "Camera " <<  cameraContextValue << ": " << cameras[ cameraContextValue ].GetDeviceInfo().GetModelName() << endl;
-            cout << "GrabSucceeded: " << ptrGrabResult->GrabSucceeded() << endl;
-            cout << "SizeX: " << ptrGrabResult->GetWidth() << endl;
-            cout << "SizeY: " << ptrGrabResult->GetHeight() << endl;
-            const uint8_t *pImageBuffer = (uint8_t *) ptrGrabResult->GetBuffer();
-            cout << "Gray value of first pixel: " << (uint32_t) pImageBuffer[0] << endl << endl;    
-            Format_converter.Convert(targetImage, ptrGrabResult);
-            filesName = frame->GetImagesFileName(cameraContextValue);
-            openCvImage =  Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *) targetImage.GetBuffer());
-            imwrite(filesName, openCvImage);
-            cout << "the image file name is : " << filesName << endl;    
-            WaitObject::Sleep(150);
-            wxImage image(filesName);
-            wxBitmap bitmap(image);  
-            // GetCanvas0()->SetBitmapLabel(bitmap);
-            WaitObject::Sleep(200);
-        } while (cameras.IsGrabbing());
-        cameras.StopGrabbing();
-        cameras.Close();
-        PylonTerminate();
-    }
-    catch (const GenericException &e)
-    {
-        (void)wxMessageBox(e.GetDescription(), wxT("视频设备-错误信息"), wxOK|wxICON_INFORMATION);
-        PylonTerminate();
-    }
 }
 
 void MyFrame::ImageFaceDatas( string files, intptr_t order)
@@ -774,10 +608,10 @@ void MyFrame::InitFlexSizer(wxFlexGridSizer *sizer, wxWindow* parent)
 void MyFrame::OnThreadUpdate(wxCommandEvent& evt) 
 {
 	wxThreadEvent* tEvt = (wxThreadEvent*)&evt;
-	THREAD_MSG_TYPE * threadMsg = (THREAD_MSG_TYPE *)tEvt->GetExtraLong();
-	wxString msg = wxString::Format(wxT("线程Id:%x，发来消息：%x\r\n"), threadMsg->threadId, threadMsg->cameras_index);
-	cout << msg << endl;
-    delete threadMsg;
+	// THREAD_MSG_TYPE * threadMsg = (THREAD_MSG_TYPE *) tEvt;
+	// wxString msg = wxString::Format(wxT("发来消息：%x\r\n"), threadMsg->threadId, threadMsg->cameras_index);
+	cout << "发来消息：" << tEvt << endl;
+    // delete threadMsg;
 }
 
 void MyFrame::ConnectionDB() 

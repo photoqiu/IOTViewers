@@ -22,6 +22,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 
+
 using namespace std;
 using namespace cv;
 
@@ -40,8 +41,7 @@ enum
 //声明一个新的事件种类用于我们的MyThread类
 wxDECLARE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_COMMAND_MYTHREAD_UPDATE, wxThreadEvent);
-wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);//定义事件种类
-wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_UPDATE, wxThreadEvent);
+
  
 // 为线程事件传输数据，你可以定义成其他的结构
 typedef struct THREAD_MSG
@@ -56,16 +56,14 @@ class MyThread : public wxThread
 public:
     MyThread(MyFrame* draw_rect);
     virtual void *Entry();
-    void displaySynchronous(const wxEventType & evtType, const wxBitmap bitmap, intptr_t cameras_index);
+
 private:
+    void displaySynchronous(const wxEventType & evtType, const wxBitmap bitmap, intptr_t cameras_index);
     string make_filename(intptr_t cameras_order);
-    void MatToWxImage(Mat &mat, wxImage  &image);
-    Mat convertType(const Mat& srcImg, int toType, double alpha, double beta);
     void save_imagefiles(Mat &mat);
     void play_cameras();
     void stop_cameras();
     void pause_cameras();
-    wxImage image;
     MyFrame* gui;
 };
 
@@ -121,7 +119,6 @@ public:
     MyFrame();
     ~MyFrame() ;
     void initCameras();
-    void initShowCameras();
     MyCanvas* GetCanvas0() const { return m_canvas_0; }
     void SetCanvas0(MyCanvas* canvas) { m_canvas_0 = canvas; }
     MyCanvas* GetCanvas1() const { return m_canvas_1; }
