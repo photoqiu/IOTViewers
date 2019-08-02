@@ -91,122 +91,6 @@ static const int imagesH  =  320;
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);//定义事件种类
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_UPDATE, wxThreadEvent);
 
-void  ShowImage( IImage& image, const char* message = NULL)
-{
-#ifdef PYLON_WIN_BUILD
-    Pylon::DisplayImage(1, image);
-#endif
-    if ( message)
-    {
-        cout << endl << message << " ";
-    }
-    ios state(NULL);
-    state.copyfmt(cout);
-    const uint8_t* pBytes = reinterpret_cast<const uint8_t*>(image.GetBuffer());
-    cout << endl << "First six bytes of the image: " << endl;
-    for (unsigned int i = 0; i < 6; ++i)
-    {
-        cout << "0x" << hex << setfill('0') << setw(2) << unsigned(pBytes[i]) << " ";
-    }
-    cout << endl;
-    cout.copyfmt(state);
-    cerr << "Press Enter to continue." << endl;
-    while( cin.get() != '\n');
-}
-
-// ----------------------------------------------------------------------------
-// MyCanvas n                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
-// ----------------------------------------------------------------------------
-IMPLEMENT_CLASS(MyCanvas, wxScrolledWindow)
-wxBEGIN_EVENT_TABLE(MyCanvas, wxScrolledWindow)
-    EVT_PAINT(MyCanvas::OnPaint)
-wxEND_EVENT_TABLE()
-
-MyCanvas::MyCanvas( wxWindow *parent, MyFrame* frame, wxWindowID id, const wxPoint &pos, const wxSize &size )
-        : wxScrolledWindow( parent, id,  pos, size, wxSUNKEN_BORDER )
-{
-    m_nCurrentProgress = 0;
-    m_owner = frame;
-    wxMemoryDC dc;
-    dc.SelectObject( wxNullBitmap );
-    ClearShapes();
-}
-
-MyCanvas::~MyCanvas()
-{
-    ClearShapes();
-}
-
-void MyCanvas::ClearShapes()
-{
-    wxList::compatibility_iterator node = m_displayList.GetFirst();
-    cout << "the total image face number is : " << node << endl;
-    while (node)
-    {
-        DrawShape* shape = (DrawShape*) node->GetData();
-        delete shape;
-        node = node->GetNext();
-    }
-    m_displayList.Clear();
-}
-
-void MyCanvas::DrawShapes(wxDC& dc)
-{
-    wxList::compatibility_iterator node = m_displayList.GetFirst();
-    while (node)
-    {
-        DrawShape* shape = (DrawShape*) node->GetData();
-        shape->Draw(dc);
-        node = node->GetNext();
-    }
-}
-
-void MyCanvas::OnPaint( wxPaintEvent &WXUNUSED(event) )
-{
-    cout << "MyCanvas : " << this  << endl;
-    // wxPaintDC dc( this );
-    wxBufferedPaintDC dc(this);
-    PrepareDC( dc );
-    DrawShapes(dc);
-}
-
-// ----------------------------------------------------------------------------
-// DrawShape n                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
-// ----------------------------------------------------------------------------
-DrawShape::DrawShape(const wxBitmap& bitmap)
-{
-    m_bitmap = bitmap;
-    m_pos.x = 0;
-    m_pos.y = 0;
-}
-
-bool DrawShape::Draw(wxDC& dc)
-{
-    cout << "DrawShape is Complete." << endl;
-    if (m_bitmap.IsOk())
-    {
-        wxMemoryDC memDC;
-        memDC.SelectObject(m_bitmap);
-	    double scaleX = ((double) imagesW)/((double) m_bitmap.GetWidth());
-	    double scaleY = ((double) imagesH)/((double) m_bitmap.GetHeight());
-        if (scaleX < 1.0 || scaleY < 1.0)
-        {
-            double scale = wxMin(scaleX, scaleY);
-            int newWidth = (int) (scale * m_bitmap.GetWidth());
-            int newHeight = (int) (scale * m_bitmap.GetHeight());
-            wxImage temp_image = m_bitmap.ConvertToImage();
-            temp_image.Rescale(newWidth, newHeight);
-            wxBitmap temp_bitmap(temp_image);
-            dc.DrawBitmap(temp_bitmap, (imagesW-newWidth) * 0.5, (imagesH-newHeight) * 0.5, true);
-        }
-        else
-        {
-            dc.DrawBitmap(m_bitmap, (imagesW-m_bitmap.GetWidth()) * 0.5, (imagesH-m_bitmap.GetHeight()) * 0.5, true);
-        }
-        return true;
-    }
-    return false;
-}
 // ----------------------------------------------------------------------------
 // MyApp n                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 // ----------------------------------------------------------------------------
@@ -219,156 +103,10 @@ bool MyApp::OnInit()
     }
     ::wxInitAllImageHandlers();
     frame = new MyFrame();
-    frame->SetFrame(frame);
     frame->SetIsCapture(false);
-    DrawHandle();
     frame->Show(true); 
     return true;
 }
-
-void MyApp::DrawHandle() 
-{
-    wxString bitmap_name;
-    wxImage image;
-    cout <<  "00000 ----> MyFrame : " << GetFrame() << endl;
-    int i = 1;
-    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
-    if (image.LoadFile(bitmap_name, wxBITMAP_TYPE_PNG))
-    {
-        DrawShape* newShape = new DrawShape(wxBitmap(image));
-        GetFrame()->GetCanvas0()->GetDisplayList().Append(newShape);
-    }
-    i = 2;
-    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
-    if (image.LoadFile(bitmap_name, wxBITMAP_TYPE_PNG))
-    {
-        DrawShape* newShape = new DrawShape(wxBitmap(image));
-        GetFrame()->GetCanvas1()->GetDisplayList().Append(newShape);
-    }
-    i = 3;
-    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
-    if (image.LoadFile(bitmap_name, wxBITMAP_TYPE_PNG))
-    {
-        DrawShape* newShape = new DrawShape(wxBitmap(image));
-        GetFrame()->GetCanvas2()->GetDisplayList().Append(newShape);
-    }
-    i = 4;
-    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
-    if (image.LoadFile(bitmap_name, wxBITMAP_TYPE_PNG))
-    {
-        DrawShape* newShape = new DrawShape(wxBitmap(image));
-        GetFrame()->GetCanvas3()->GetDisplayList().Append(newShape);
-    }
-}
-
-// ----------------------------------------------------------------------------
-// CSampleImageEventHandler
-// ----------------------------------------------------------------------------
-// A user-provided buffer factory.
-class CSampleImageEventHandler : public CImageEventHandler
-{
-public:
-    virtual void OnImageGrabbed( CInstantCamera& camera, const CGrabResultPtr& ptrGrabResult)
-    {
-        CPylonImage targetImage;
-        MyFrame* frame = new MyFrame();
-        intptr_t cameraContextValue = ptrGrabResult->GetCameraContext();
-        cout << "Camera " << cameraContextValue << ": " << camera.GetDeviceInfo().GetModelName() << endl;
-        uint16_t frameNumber = (uint16_t)ptrGrabResult->GetBlockID();
-        cout << "frameNumber : " << frameNumber << endl;
-        cout << "GetErrorCode : " << ptrGrabResult->GetErrorCode() << endl;
-        cout << "GetErrorDescription : " << ptrGrabResult->GetErrorDescription() << endl;
-        cout << "imageGetNumberOfSkippedImages : " << ptrGrabResult->GetNumberOfSkippedImages() << endl;
-        cout << "CSampleImageEventHandler::OnImageGrabbed called." << endl;
-        cout << "SizeX: " << ptrGrabResult->GetWidth() << endl;
-        cout << "SizeY: " << ptrGrabResult->GetHeight() << endl;
-        CImageFormatConverter Format_converter;
-        Format_converter.OutputPixelFormat = PixelType_BGR8packed;
-        Format_converter.Convert(targetImage, ptrGrabResult);
-        string filesName = frame->GetImagesFileName(cameraContextValue);
-        Mat image(targetImage.GetWidth(), targetImage.GetHeight(), CV_8UC1, targetImage.GetBuffer(), Mat::AUTO_STEP); 
-        imwrite(filesName, image);
-        frame->ImageFaceDatas(filesName, cameraContextValue);
-        cout << endl;
-        cout << endl;
-    }
-};
-
-// ----------------------------------------------------------------------------
-// MyBufferFactory
-// ----------------------------------------------------------------------------
-// A user-provided buffer factory.
-class MyBufferFactory : public IBufferFactory
-{
-public:
-    MyBufferFactory()
-        : m_lastBufferContext(5000)
-    {
-    }
-
-    virtual ~MyBufferFactory()
-    {
-    }
-
-    // Will be called when the Instant Camera object needs to allocate a buffer.
-    // Return the buffer and context data in the output parameters.
-    // In case of an error new() will throw an exception
-    // which will be forwarded to the caller to indicate an error.
-    // Warning: This method can be called by different threads.
-    virtual void AllocateBuffer( size_t bufferSize, void** pCreatedBuffer, intptr_t& bufferContext)
-    {
-        try
-        {
-            // Allocate buffer for pixel data.
-            // If you already have a buffer allocated by your image processing library you can use this instead.
-            // In this case you must modify the delete code (see below) accordingly.
-            *pCreatedBuffer = new uint8_t[bufferSize];
-            // The context information is never changed by the Instant Camera and can be used
-            // by the buffer factory to manage the buffers.
-            // The context information can be retrieved from a grab result by calling
-            // ptrGrabResult->GetBufferContext();
-            bufferContext = ++m_lastBufferContext;
-
-            cout << "Created buffer " << bufferContext << ", " << *pCreatedBuffer << endl;
-        }
-        catch (const std::exception&)
-        {
-            // In case of an error we must free the memory we may have already allocated.
-            if (*pCreatedBuffer != NULL)
-            {
-                uint8_t* p = reinterpret_cast<uint8_t*>(pCreatedBuffer);
-                delete[] p;
-                *pCreatedBuffer = NULL;
-            }
-            // Rethrow exception.
-            // AllocateBuffer can also just return with *pCreatedBuffer = NULL to indicate
-            // that no buffer is available at the moment.
-            throw;
-        }
-    }
-
-    // Frees a previously allocated buffer.
-    // Warning: This method can be called by different threads.
-    virtual void FreeBuffer( void* pCreatedBuffer, intptr_t bufferContext)
-    {
-        uint8_t* p = reinterpret_cast<uint8_t*>(pCreatedBuffer);
-        delete [] p;
-        cout << "Freed buffer " << bufferContext << ", " << pCreatedBuffer << endl;
-    }
-
-    // Destroys the buffer factory.
-    // This will be used when you pass the ownership of the buffer factory instance to pylon
-    // by defining Cleanup_Delete. pylon will call this function to destroy the instance
-    // of the buffer factory. If you don't pass the ownership to pylon (Cleanup_None)
-    // this method will be ignored.
-    virtual void DestroyBufferFactory()
-    {
-        delete this;
-    }
-
-protected:
-    unsigned long m_lastBufferContext;
-};
 
 MyThread::MyThread(MyFrame* draw_rect):wxThread()
 {
@@ -385,7 +123,6 @@ void MyThread::play_cameras()
     PylonInitialize();
      try
     {
-		MyBufferFactory myFactory;
 		CTlFactory& tlFactory = CTlFactory::GetInstance();
 		DeviceInfoList_t devices;
         Mat openCvImage;
@@ -411,6 +148,13 @@ void MyThread::play_cameras()
         cameras.StartGrabbing();
         do 
         {
+            if ( TestDestroy() ) 
+            {
+                cameras.StopGrabbing();
+                cameras.Close();
+                PylonTerminate();
+                return ;
+            }
             cameras.RetrieveResult( 5000, ptrGrabResult, TimeoutHandling_ThrowException);
             intptr_t cameraContextValue = ptrGrabResult->GetCameraContext();
             cout << "Camera " <<  cameraContextValue << ": " << cameras[ cameraContextValue ].GetDeviceInfo().GetModelName() << endl;
@@ -423,38 +167,12 @@ void MyThread::play_cameras()
             filesName = make_filename(cameraContextValue);
             openCvImage =  Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *) targetImage.GetBuffer());
             imwrite(filesName, openCvImage);
-            if (images.LoadFile(filesName, wxBITMAP_TYPE_PNG))
-            {
-                
-            }
-            //images.Destroy();
-            //images = NULL;
-            /*
-            // displaySynchronous(wxEVT_COMMAND_MYTHREAD_UPDATE, bitmap, cameraContextValue);
-            DrawShape* newShape = new DrawShape(wxBitmap(image));
-            if (cameraContextValue == 0) 
-            {
-                gui->GetCanvas0()->GetDisplayList().Append(newShape);
-            }
-            if (cameraContextValue == 1) 
-            {
-                gui->GetCanvas1()->GetDisplayList().Append(newShape);
-            }
-            if (cameraContextValue == 2) 
-            {
-                gui->GetCanvas2()->GetDisplayList().Append(newShape);
-            }
-            if (cameraContextValue == 3) 
-            {
-                gui->GetCanvas3()->GetDisplayList().Append(newShape);
-            }
-            gui->Refresh(true);
-            gui->Update();
-            //imwrite(filesName, openCvImage);
-             */
+            WaitObject::Sleep(50);
+            bool isDefect = false;
+            displaySynchronous(wxEVT_COMMAND_MYTHREAD_UPDATE, filesName, cameraContextValue, isDefect);
+            WaitObject::Sleep(10);
             //////////////////////////////////////////////////////////////////////
-            cout << "the image file name is : " << filesName << endl;    
-            WaitObject::Sleep(100);
+            cout << "the image file name is : " << filesName << endl;
         } while (cameras.IsGrabbing());
         cameras.StopGrabbing();
         cameras.Close();
@@ -463,17 +181,78 @@ void MyThread::play_cameras()
     catch (const GenericException &e)
     {
         (void)wxMessageBox(e.GetDescription(), wxT("视频设备-错误信息"), wxOK|wxICON_INFORMATION);
+        play_cameras();
         PylonTerminate();
     }
 }
 
-void MyThread::displaySynchronous(const wxEventType & evtType, const wxBitmap bitmap, intptr_t cameras_index) 
+void MyThread::displaySynchronous(const wxEventType & evtType, const string imagePath, intptr_t cameras_index, bool isDefect) 
 {
+    if ( TestDestroy() ) 
+    {
+        delete_imageFiles(imagePath);
+        return ;
+    }
     wxThreadEvent * threadEvt = new wxThreadEvent(evtType);
-	THREAD_MSG_TYPE * threadMsg = new THREAD_MSG_TYPE{ wxThread::GetCurrentId(), cameras_index, bitmap };
-	// threadEvt->SetExtraLong(reinterpret_cast<long>(threadMsg));
-    //threadEvt->SetInt ( 1 );
-   wxMessageOutputDebug().Printf("MYFRAME: MyThread update...\n");
+    wxString datas(imagePath.c_str());
+	unsigned long dataIndex = cameras_index;
+    int camerasIndex = 0;
+    if (cameras_index == 1) 
+    {
+        camerasIndex = 1;
+    } 
+    else if (cameras_index == 2) 
+    {
+        camerasIndex = 2;
+    }
+    else if (cameras_index == 3) 
+    {   
+        camerasIndex = 3;
+    }
+    threadEvt->SetInt ( camerasIndex );
+    threadEvt->SetString ( datas );
+    wxQueueEvent(gui, threadEvt->Clone());
+}
+
+bool MyThread::delete_imageFiles(string fileName)
+{
+    const char* savePath = (char*)fileName.c_str();
+    if((access(savePath, F_OK)) != -1)   
+    {   
+        if(remove(savePath)==0)
+        {
+            return true;
+        }
+        else
+        {
+            cout<<"删除失败"<<endl;
+            return false;
+        }
+    }   
+    else  
+    {   
+        return false;
+    }
+}
+
+bool MyThread::copy_imageFiles(string fileName, string toFileName)
+{
+    const char* fileNameFrom = (char*)fileName.c_str();
+    const char* fileNameTo = (char*)toFileName.c_str();
+    if((access(fileNameFrom, F_OK)) != -1)   
+    {
+        ifstream in (fileNameFrom);
+        ofstream out (fileNameTo);
+        out << in.rdbuf();
+        out.close();
+        in.close();
+        return true;
+    } 
+    else 
+    {
+
+        return false;
+    }
 }
 
 string MyThread::make_filename(intptr_t cameras_order) 
@@ -501,12 +280,104 @@ string MyThread::make_filename(intptr_t cameras_order)
 }
 
 // ----------------------------------------------------------------------------
+// WxImagePanel
+// ----------------------------------------------------------------------------
+BEGIN_EVENT_TABLE(WxImagePanel, wxPanel)
+    // some useful events
+    /*
+    EVT_MOTION(wxImagePanel::mouseMoved)
+    EVT_LEFT_DOWN(wxImagePanel::mouseDown)
+    EVT_LEFT_UP(wxImagePanel::mouseReleased)
+    EVT_RIGHT_DOWN(wxImagePanel::rightClick)
+    EVT_LEAVE_WINDOW(wxImagePanel::mouseLeftWindow)
+    EVT_KEY_DOWN(wxImagePanel::keyPressed)
+    EVT_KEY_UP(wxImagePanel::keyReleased)
+    EVT_MOUSEWHEEL(wxImagePanel::mouseWheelMoved)
+    */
+    // catch paint events
+    EVT_PAINT(WxImagePanel::paintEvent)
+    //Size event
+    EVT_SIZE(WxImagePanel::OnSize)
+END_EVENT_TABLE()
+
+WxImagePanel::WxImagePanel(wxFrame* parent, wxString file, wxBitmapType format) : wxPanel(parent)
+{
+    image.LoadFile(file, format);
+    w = -1;
+    h = -1;
+}
+
+void WxImagePanel::loaderImages(wxString file, wxBitmapType format)
+{
+    image.LoadFile(file, format);
+    w = -1;
+    h = -1;
+    string imageFiles = string ( file.mb_str() );
+    delete_imageFiles(imageFiles);
+}
+
+bool WxImagePanel::delete_imageFiles(string fileName)
+{
+    const char* savePath = (char*)fileName.c_str();
+    if((access(savePath, F_OK)) != -1)   
+    {   
+        if(remove(savePath)==0)
+        {
+            return true;
+        }
+        else
+        {
+            cout<<"删除失败"<<endl;
+            return false;
+        }
+    }   
+    else  
+    {   
+        return false;
+    }
+}
+
+void WxImagePanel::paintEvent(wxPaintEvent & evt)
+{
+    wxPaintDC dc(this);
+    render(dc);
+}
+
+void WxImagePanel::paintNow()
+{
+    // depending on your system you may need to look at double-buffered dcs
+    wxClientDC dc(this);
+    render(dc);
+}
+
+void WxImagePanel::render(wxDC&  dc)
+{
+    int neww, newh;
+    dc.GetSize( &neww, &newh );
+    if( neww != w || newh != h )
+    {
+        resized = wxBitmap( image.Scale( neww, newh /*, wxIMAGE_QUALITY_HIGH*/ ) );
+        w = neww;
+        h = newh;
+        dc.DrawBitmap( resized, 0, 0, false );
+    } else {
+        dc.DrawBitmap( resized, 0, 0, false );
+    }
+}
+
+void WxImagePanel::OnSize(wxSizeEvent& event){
+    Refresh();
+    event.Skip();
+}
+
+// ----------------------------------------------------------------------------
 // MyFrame
 // ----------------------------------------------------------------------------
 wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(LAYOUT_ABOUT, MyFrame::OnAbout)
     EVT_MENU(LAYOUT_QUIT, MyFrame::OnQuit)
     EVT_MENU(LAYOUT_TEST_PROPORTIONS, MyFrame::TestProportions)
+    EVT_SIZE(MyFrame::OnSize)
     EVT_COMMAND(wxID_ANY, wxEVT_COMMAND_MYTHREAD_UPDATE, MyFrame::OnThreadUpdate)
 	EVT_COMMAND(wxID_ANY, wxEVT_COMMAND_MYTHREAD_COMPLETED, MyFrame::OnThreadCompletion)
 wxEND_EVENT_TABLE()
@@ -521,6 +392,7 @@ MyFrame::MyFrame() : wxFrame(NULL, wxID_ANY, wxT("衡钢钢管缺陷检测--视�
     SetIcon(wxICON(sample));
     wxMenuBar *menu_bar = new wxMenuBar;
     wxMenu *file_menu = new wxMenu;
+    int i = 1;
     file_menu->Append(LAYOUT_TEST_PROPORTIONS, wxT("&开始采集数据...\tF1"));
     file_menu->AppendSeparator();
     file_menu->Append(LAYOUT_QUIT, wxT("退&出"), wxT("退出程序"));
@@ -528,74 +400,39 @@ MyFrame::MyFrame() : wxFrame(NULL, wxID_ANY, wxT("衡钢钢管缺陷检测--视�
     wxMenu *help_menu = new wxMenu;
     help_menu->Append(LAYOUT_ABOUT, wxT("关于&软件"), wxT("关于软件..."));
     menu_bar->Append(help_menu, wxT("&说明"));
-    SetMenuBar(menu_bar);
+    SetMenuBar(menu_bar); 
 #if wxUSE_STATUSBAR
     CreateStatusBar(2);
     SetStatusText("衡钢OnThreadCompletion视觉识别");
 #endif 
 ////头部菜单栏----结束。OnThreadCompletion
-    wxFlexGridSizer *sizerFlex;
-    wxPanel* p = new wxPanel(this, wxID_ANY);
-    wxSizer *sizerCol1 = new wxBoxSizer(wxVERTICAL);
-    sizerFlex = new wxFlexGridSizer(2, 2, wxSize(5, 5));
-    InitFlexSizer(sizerFlex, p);
-    sizerFlex->AddGrowableCol(0, 1);
-    sizerFlex->AddGrowableCol(1, 2);
-    sizerCol1->Add(sizerFlex, 1, wxALL | wxEXPAND, 10);
-    wxGridSizer *sizerTop = new wxGridSizer(1, 0,  20);
-    sizerTop->Add(sizerCol1, 1, wxEXPAND);
-    p->SetSizer(sizerTop);
-    sizerTop->SetSizeHints(this);
+    wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+    wxGridSizer *sizerTop = new wxGridSizer(2, 2, 1, 1);
+    wxString bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
+    drawPanel0 = new WxImagePanel(this, bitmap_name, wxBITMAP_TYPE_PNG);
+    i = 2;
+    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
+    drawPanel1 = new WxImagePanel(this, bitmap_name, wxBITMAP_TYPE_PNG);
+    i = 3;
+    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
+    drawPanel2 = new WxImagePanel(this, bitmap_name, wxBITMAP_TYPE_PNG);
+    i = 4;
+    bitmap_name = wxString::Format(wxT("/soft/wxWidgets-3.0.4/samples/cameras/image0%i.png"),  i);
+    drawPanel3 = new WxImagePanel(this, bitmap_name, wxBITMAP_TYPE_PNG);
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    sizerTop->Add(drawPanel0, 0, wxEXPAND);
+    sizerTop->Add(drawPanel1, 0, wxEXPAND);
+    sizerTop->Add(drawPanel2, 0, wxEXPAND);
+    sizerTop->Add(drawPanel3, 0, wxEXPAND);
+    sizer->Add(sizerTop, 1, wxEXPAND);
+    SetSizer(sizer);
+    SetMinSize(wxSize(470,360));
+    Centre();
+    CreateThread();
 }
 
-void MyFrame::ImageFaceDatas( string files, intptr_t order)
+void MyFrame::CreateThread()
 {
-    wxString bitmap_name = wxString::FromUTF8(files.c_str());
-    wxImage image;
-    cout <<  "MyFrame : " << wxGetApp().GetFrame() << endl;
-    if (image.LoadFile(bitmap_name, wxBITMAP_TYPE_PNG))
-    {
-        DrawShape* newShape = new DrawShape(wxBitmap(image));
-        cout << "GetCanvas --- ----- -----> 0  : " << GetCanvas0() << endl;
-        if (order == 0) {
-            wxGetApp().GetFrame()->GetCanvas0()->GetDisplayList().Append(newShape);
-        } else if (order == 1) {
-            wxGetApp().GetFrame()->GetCanvas1()->GetDisplayList().Append(newShape);
-        } else if (order == 2) {
-            wxGetApp().GetFrame()->GetCanvas2()->GetDisplayList().Append(newShape);
-        } else if (order == 3) {
-            wxGetApp().GetFrame()->GetCanvas3()->GetDisplayList().Append(newShape);
-        }
-    }
-}
-
-string MyFrame::GetImagesFileName(intptr_t Orders) 
-{
-    timeval curTime;
-    gettimeofday(&curTime, NULL);
-    int milli = curTime.tv_usec / 1000;
-    unsigned long micro = curTime.tv_sec * (uint64_t)1000000 + curTime.tv_usec;
-    stringstream OrderStr;
-    stringstream microTimer;
-    stringstream ss; 
-    string FileName;
-    OrderStr << Orders;
-    microTimer << micro;
-    ss << "/soft/wxWidgets-3.0.4/gtk-build/samples/cameras/cachedatas/GrabbedImage_" << OrderStr.str() << "_" << microTimer.str() << ".png";
-    ss >> FileName;
-    return FileName;
-}
-
-void MyFrame::InitFlexSizer(wxFlexGridSizer *sizer, wxWindow* parent)
-{
-    m_canvas_0 = new MyCanvas(parent, this, wxID_ANY,  wxPoint(0,0), wxSize(imagesW, imagesH));
-    m_canvas_1 = new MyCanvas(parent, this, wxID_ANY,  wxPoint(0,0), wxSize(imagesW, imagesH));
-    m_canvas_2 = new MyCanvas(parent, this,  wxID_ANY,  wxPoint(0,0), wxSize(imagesW, imagesH));
-    m_canvas_3 = new MyCanvas(parent, this,  wxID_ANY,  wxPoint(0,0), wxSize(imagesW, imagesH));
-    sizer->Add(m_canvas_0, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer->Add(m_canvas_1, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer->Add(m_canvas_2, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer->Add(m_canvas_3, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     m_pthread = new MyThread(this);
     if ( m_pthread->Create() != wxTHREAD_NO_ERROR )
     {
@@ -603,15 +440,42 @@ void MyFrame::InitFlexSizer(wxFlexGridSizer *sizer, wxWindow* parent)
         delete m_pthread;
         m_pthread = NULL;
     }
+    SetIsCapture(true);
+    m_pthread->Run();
+    m_pthread->Pause();
+}
+
+void MyFrame::OnSize(wxSizeEvent &event)
+{
+    event.Skip();
+    wxSize currentRect = this->GetClientSize();
+    cout << "the frame is resize(), w:" << currentRect.x <<  "h:" << currentRect.y << endl;
 }
 
 void MyFrame::OnThreadUpdate(wxCommandEvent& evt) 
 {
 	wxThreadEvent* tEvt = (wxThreadEvent*)&evt;
-	// THREAD_MSG_TYPE * threadMsg = (THREAD_MSG_TYPE *) tEvt;
-	// wxString msg = wxString::Format(wxT("发来消息：%x\r\n"), threadMsg->threadId, threadMsg->cameras_index);
-	cout << "发来消息：" << tEvt << endl;
-    // delete threadMsg;
+    wxString imagePath = tEvt->GetString();
+    int camerasIndex = tEvt->GetInt();
+    if (camerasIndex == 0) 
+    {
+        drawPanel0->loaderImages(imagePath, wxBITMAP_TYPE_PNG);
+    }
+    else if (camerasIndex == 1) 
+    {
+        drawPanel1->loaderImages(imagePath, wxBITMAP_TYPE_PNG);
+    }
+    else if (camerasIndex == 2) 
+    {
+        drawPanel2->loaderImages(imagePath, wxBITMAP_TYPE_PNG);
+    }
+    else if (camerasIndex == 3)
+    {
+        drawPanel3->loaderImages(imagePath, wxBITMAP_TYPE_PNG);
+    }
+    Refresh();
+    wxString msg = wxString::Format(wxT("获取的进度的内容：%x, 发来消息：%s\r\n"), tEvt->GetInt(), tEvt->GetString());
+	cout << "发来消息：" << msg << endl;
 }
 
 void MyFrame::ConnectionDB() 
@@ -635,20 +499,23 @@ void MyFrame::ConnectionDB()
 
 void MyFrame::TestProportions(wxCommandEvent& WXUNUSED(event))
 {
-        SetIsCapture(true);
         if (m_pthread)
         {
-            m_pthread->Run();
+            if (m_pthread->IsRunning()) 
+            {
+                SetIsCapture(true);
+                m_pthread->Pause();
+            } 
+            else if (m_pthread->IsPaused()) 
+            {
+                SetIsCapture(false);
+                m_pthread->Resume();
+            }
         }
 }
 
 void MyFrame::OnThreadCompletion(wxCommandEvent& evt) {
-	wxThreadEvent* tEvt = (wxThreadEvent*)&evt;
-	THREAD_MSG_TYPE * threadMsg = (THREAD_MSG_TYPE *)tEvt->GetExtraLong();
-	wxString msg = wxString::Format(wxT("线程Id:%x，发来消息：%s\r\n"), threadMsg->threadId, threadMsg->cameras_index);
-	wxPrintf(msg, msg.Len());
-	delete threadMsg;
-	m_pthread = nullptr;
+	cout << "the thread is complete!" << endl;
 }
 
 void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))

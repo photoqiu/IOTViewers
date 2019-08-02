@@ -10,12 +10,15 @@
 #include <iostream>
 #include <stdio.h>
 #include <string>
-#include <sys/time.h>
-#include <iostream>
 #include <iomanip>
 #include <cstdio>
 #include <sstream>
+#include <fstream>
+#include <sys/time.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "opencv2/core/core.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -26,11 +29,9 @@
 using namespace std;
 using namespace cv;
 
-class DrawShape;
 class MyFrame;
-class MyCanvas;
 class MyApp;
-
+class WxImagePanel;
 // controls and menu constants
 enum
 {
@@ -42,15 +43,6 @@ enum
 wxDECLARE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_COMMAND_MYTHREAD_UPDATE, wxThreadEvent);
 
- 
-// 为线程事件传输数据，你可以定义成其他的结构
-typedef struct THREAD_MSG
-{
-	long unsigned int    threadId;
-    intptr_t                        cameras_index;
-	wxBitmap                   bitmap;
-}  THREAD_MSG_TYPE;
-
 class MyThread : public wxThread
 {
 public:
@@ -58,9 +50,11 @@ public:
     virtual void *Entry();
 
 private:
-    void displaySynchronous(const wxEventType & evtType, const wxBitmap bitmap, intptr_t cameras_index);
+    void displaySynchronous(const wxEventType & evtType, const string imagePath, intptr_t cameras_index, bool isDefect) ;
     string make_filename(intptr_t cameras_order);
     void save_imagefiles(Mat &mat);
+    bool delete_imageFiles(string fileName);
+    bool copy_imageFiles(string fileName, string toFileName);
     void play_cameras();
     void stop_cameras();
     void pause_cameras();
@@ -71,45 +65,39 @@ class MyApp: public wxApp
 {
 public:
     MyApp(){};
-    void DrawHandle();
     bool OnInit();
-    MyFrame* GetFrame() const { return frame; }
-    void SetFrame(MyFrame* frames) { frame = frames; }
+
 private:
     MyFrame*    frame;    
 };
 wxDECLARE_APP(MyApp);
 
-class DrawShape: public wxObject
-{
-public:
-    DrawShape(const wxBitmap& bitmap);
-    ~DrawShape(){};
-    bool Draw(wxDC& dc);
-    wxBitmap& GetBitmap() const { return (wxBitmap&) m_bitmap; }
-    void SetBitmap(const wxBitmap& bitmap) { m_bitmap = bitmap; }
-    wxPoint GetPosition() const { return m_pos; }
-    void SetPosition(const wxPoint& pos) { m_pos = pos; }
-protected:
-    wxPoint        m_pos;
-    wxBitmap    m_bitmap;  
-};
 
-class MyCanvas: public wxScrolledWindow
+class WxImagePanel : public wxPanel
 {
+    wxImage image;
+    wxBitmap resized;
+    int w, h;
 public:
-    MyCanvas( wxWindow *parent, MyFrame* frame, wxWindowID, const wxPoint &pos, const wxSize &size );
-    ~MyCanvas();
-    void OnPaint( wxPaintEvent &event );
-    void DrawShapes(wxDC& dc);
-    void ClearShapes();
-    wxList& GetDisplayList() { return m_displayList; }
-private:
-    wxList          m_displayList; // A list of DragShapes
-    MyFrame*  m_owner;
-    int m_nCurrentProgress;
-    wxDECLARE_ABSTRACT_CLASS(MyCanvas);
-    wxDECLARE_EVENT_TABLE();
+    WxImagePanel(wxFrame* parent, wxString file, wxBitmapType format);
+    void loaderImages(wxString file, wxBitmapType format);
+    bool delete_imageFiles(string fileName);
+    void paintEvent(wxPaintEvent & evt);
+    void paintNow();
+    void OnSize(wxSizeEvent& event);
+    void render(wxDC& dc);
+    // some useful events
+    /*
+     void mouseMoved(wxMouseEvent& event);
+     void mouseDown(wxMouseEvent& event);
+     void mouseWheelMoved(wxMouseEvent& event);
+     void mouseReleased(wxMouseEvent& event);
+     void rightClick(wxMouseEvent& event);
+     void mouseLeftWindow(wxMouseEvent& event);
+     void keyPressed(wxKeyEvent& event);
+     void keyReleased(wxKeyEvent& event);
+     */
+    DECLARE_EVENT_TABLE()
 };
 
 // the main frame class
@@ -118,35 +106,22 @@ class MyFrame : public wxFrame
 public:
     MyFrame();
     ~MyFrame() ;
-    void initCameras();
-    MyCanvas* GetCanvas0() const { return m_canvas_0; }
-    void SetCanvas0(MyCanvas* canvas) { m_canvas_0 = canvas; }
-    MyCanvas* GetCanvas1() const { return m_canvas_1; }
-    void SetCanvas1(MyCanvas* canvas) { m_canvas_1 = canvas; }
-    MyCanvas* GetCanvas2() const { return m_canvas_2; }
-    void SetCanvas2(MyCanvas* canvas) { m_canvas_2 = canvas; }
-    MyCanvas* GetCanvas3() const { return m_canvas_3; }
-    void SetCanvas3(MyCanvas* canvas) { m_canvas_3 = canvas; }
-    MyFrame* GetFrame() const { return frame; }
-    void SetFrame(MyFrame* frames) { frame = frames; }
     bool GetIsCapture() {  return is_capture; }
     void SetIsCapture(bool isCapture) { is_capture = isCapture; }
-    void ImageFaceDatas(string files, intptr_t order = 0);
-    string GetImagesFileName(intptr_t Orders);
     void OnThreadUpdate(wxCommandEvent& evt);
     void OnThreadCompletion(wxCommandEvent& evt);
 private:
-   MyCanvas*       m_canvas_0;
-   MyCanvas*       m_canvas_1;
-   MyCanvas*       m_canvas_2;
-   MyCanvas*       m_canvas_3;
-   MyFrame*        frame;
-   MyThread*      m_pthread;
-   bool                    is_capture = true;
+    MyThread*      m_pthread;
+    WxImagePanel* drawPanel0;
+    WxImagePanel* drawPanel1;
+    WxImagePanel* drawPanel2;
+    WxImagePanel* drawPanel3;
+    bool                    is_capture = true;
+    void CreateThread();
     void TestProportions(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
+    void OnSize(wxSizeEvent &event);
     void OnQuit(wxCommandEvent& event);
-    void InitFlexSizer(wxFlexGridSizer *sizer, wxWindow* parent);
     void ConnectionDB();
     wxDECLARE_EVENT_TABLE();
 };
